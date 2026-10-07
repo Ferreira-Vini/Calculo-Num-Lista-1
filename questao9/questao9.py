@@ -1,52 +1,53 @@
-import math
 import sys
+import math
 
-# EPSILON DA MÁQUINA
-
+# Epsilon da máquina
 eps = sys.float_info.epsilon
 
-# FUNÇÃO
 
+# Função da questão:
+# -1/x^3 - 1/x^2 = E
+#
+# Transformamos em:
+# f(x) = -1/x^3 - 1/x^2 - E = 0
 def f(x, E):
     return -1 / x**3 - 1 / x**2 - E
-  
-# DERIVADA
 
+
+# Derivada de f(x)
 def df(x):
     return 3 / x**4 + 2 / x**3
 
-# CRITÉRIO DE PARADA
 
+# Critério de parada pedido no enunciado:
+#
+# |x_(n+1) - x_n| <= eps * max(1, |x_(n+1)|)
 def convergiu(x_novo, x_antigo):
-    return abs(x_novo - x_antigo) <= eps * max(
-        1,
-        abs(x_novo)
-    )
+    return abs(x_novo - x_antigo) <= eps * max(1, abs(x_novo))
 
-# ENCONTRA UM INTERVALO COM MUDANÇA DE SINAL
 
+# Encontra automaticamente um intervalo [a, b]
+# que contenha a raiz positiva.
 def encontrar_intervalo(E):
 
-    if E >= 0:
-        raise ValueError("E deve ser negativo.")
+    # Como E < 0
+    # começamos com um limite superior positivo.
+    b = max(1.0, 2 / math.sqrt(-E))
 
-    # Começamos com um intervalo positivo
-    a = 1e-10
-    b = 1.0
-
-    # Procuramos um intervalo [a,b]
-    # onde exista mudança de sinal
-    while f(a, E) * f(b, E) > 0:
+    # Queremos f(b) > 0
+    while f(b, E) <= 0:
         b *= 2
 
-        if b > 1e10:
-            raise RuntimeError(
-                "Não foi possível encontrar um intervalo."
-            )
+    # Agora vamos diminuir b até encontrar
+    # um ponto onde f(a) < 0.
+    a = b
+
+    while f(a, E) > 0:
+        a /= 2
 
     return a, b
 
-# BISSECÇÃO
+# MÉTODO DA BISSECÇÃO
 
 def bisseccao(E, max_iter=10000):
 
@@ -56,30 +57,28 @@ def bisseccao(E, max_iter=10000):
 
     x_antigo = None
 
-    for i in range(max_iter):
+    for i in range(1, max_iter + 1):
 
         x = (a + b) / 2
         fx = f(x, E)
 
+        # Critério de parada
         if x_antigo is not None:
-
             if convergiu(x, x_antigo):
-                return x, i + 1
+                return x, i
 
+        # Atualização do intervalo
         if fa * fx <= 0:
-
             b = x
-
         else:
-
             a = x
             fa = fx
 
         x_antigo = x
 
     raise RuntimeError("Bissecção não convergiu.")
-  
-# FALSA POSIÇÃO
+
+# MÉTODO DA FALSA-POSIÇÃO
 
 def falsa_posicao(E, max_iter=10000):
 
@@ -90,59 +89,47 @@ def falsa_posicao(E, max_iter=10000):
 
     x_antigo = None
 
-    for i in range(max_iter):
+    for i in range(1, max_iter + 1):
 
+        # Fórmula da falsa-posição
         x = (a * fb - b * fa) / (fb - fa)
 
         fx = f(x, E)
 
+        # Critério de parada
         if x_antigo is not None:
-
             if convergiu(x, x_antigo):
-                return x, i + 1
+                return x, i
 
+        # Atualização do intervalo
         if fa * fx <= 0:
-
             b = x
             fb = fx
-
         else:
-
             a = x
             fa = fx
 
         x_antigo = x
 
-    raise RuntimeError("Falsa posição não convergiu.")
+    raise RuntimeError("Falsa-posição não convergiu.")
 
-# NEWTON-RAPHSON
+# MÉTODO DE NEWTON-RAPHSON
 
 def newton_raphson(E, max_iter=1000):
 
     a, b = encontrar_intervalo(E)
 
-    # Chute inicial
-    x = (a + b) / 2
+    # Escolhemos o limite inferior como aproximação inicial.
+    x = a
 
-    for i in range(max_iter):
+    for i in range(1, max_iter + 1):
 
+        # Fórmula de Newton-Raphson
         x_novo = x - f(x, E) / df(x)
 
-        # Evita valores inválidos
-        if x_novo <= 0 or not math.isfinite(x_novo):
-            x_novo = (a + b) / 2
-
+        # Critério de parada
         if convergiu(x_novo, x):
-            return x_novo, i + 1
-
-        # Mantém a raiz dentro do intervalo
-        if f(a, E) * f(x_novo, E) <= 0:
-
-            b = x_novo
-
-        else:
-
-            a = x_novo
+            return x_novo, i
 
         x = x_novo
 
@@ -150,42 +137,51 @@ def newton_raphson(E, max_iter=1000):
 
 # PROGRAMA PRINCIPAL
 
+print("========== QUESTÃO 9 ==========")
+
 E = float(input("Digite um valor negativo para E: "))
 
 if E >= 0:
-    raise ValueError("O valor de E precisa ser negativo.")
+    raise ValueError("O valor de E deve ser negativo.")
 
 
-# Executa os três métodos
+# Encontrar intervalo
+a, b = encontrar_intervalo(E)
 
+print(f"\nE = {E}")
+print(f"eps = {eps:.17e}")
+print(f"Intervalo inicial = [{a:.15e}, {b:.15e}]")
+
+
+# Bissecção
 x_bis, iter_bis = bisseccao(E)
 
+print("\n--- Bissecção ---")
+print(f"x = {x_bis:.15e}")
+print(f"f(x) = {f(x_bis, E):.3e}")
+print(f"Iterações = {iter_bis}")
+
+
+# Falsa-posição
 x_fp, iter_fp = falsa_posicao(E)
 
+print("\n--- Falsa-posição ---")
+print(f"x = {x_fp:.15e}")
+print(f"f(x) = {f(x_fp, E):.3e}")
+print(f"Iterações = {iter_fp}")
+
+
+# Newton-Raphson
 x_newton, iter_newton = newton_raphson(E)
 
-
-# RESULTADOS
-
-print("\n========== QUESTÃO 9 ==========")
-
-print(f"E = {E}")
-print(f"eps da máquina = {eps:.17e}")
-
-
-print("\nBissecção:")
-print(f"x = {x_bis:.15f}")
-print(f"Iterações = {iter_bis}")
-print(f"f(x) = {f(x_bis, E):.3e}")
-
-
-print("\nFalsa posição:")
-print(f"x = {x_fp:.15f}")
-print(f"Iterações = {iter_fp}")
-print(f"f(x) = {f(x_fp, E):.3e}")
-
-
-print("\nNewton-Raphson:")
-print(f"x = {x_newton:.15f}")
-print(f"Iterações = {iter_newton}")
+print("\n--- Newton-Raphson ---")
+print(f"x = {x_newton:.15e}")
 print(f"f(x) = {f(x_newton, E):.3e}")
+print(f"Iterações = {iter_newton}")
+
+
+# Comparação
+print("\n========== COMPARAÇÃO ==========")
+print(f"Bissecção:       {iter_bis} iterações")
+print(f"Falsa-posição:   {iter_fp} iterações")
+print(f"Newton-Raphson:  {iter_newton} iterações")
